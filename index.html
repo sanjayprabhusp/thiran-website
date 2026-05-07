@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Google AI Studio App</title>
+    <script>
+      // Suppress Vite WebSocket connection errors
+      const OriginalWebSocket = window.WebSocket;
+      window.WebSocket = function(url, protocols) {
+        if (
+          (typeof url === 'string' && (url.includes('vite') || url.includes('localhost') || url.includes('127.0.0.1'))) ||
+          (typeof protocols === 'string' && protocols.includes('vite')) ||
+          (Array.isArray(protocols) && protocols.some(p => p.includes('vite')))
+        ) {
+          // Return a dummy WebSocket that just hangs out indefinitely
+          return {
+            addEventListener: function() {},
+            removeEventListener: function() {},
+            send: function() {},
+            close: function() {},
+            readyState: 1 // OPEN
+          };
+        }
+        return new OriginalWebSocket(url, protocols);
+      };
+      
+      const originalConsoleWarn = console.warn;
+      const originalConsoleError = console.error;
+      
+      const isNoisy = (msg) => {
+        if (typeof msg !== 'string') return false;
+        return msg.includes('WebSocket') || 
+               msg.includes('Autoplay') || 
+               msg.includes('Failed to load because no supported source');
+      };
+
+      console.error = function(...args) {
+        if (isNoisy(args[0])) return;
+        originalConsoleError.apply(console, args);
+      };
+      
+      console.warn = function(...args) {
+        if (isNoisy(args[0])) return;
+        originalConsoleWarn.apply(console, args);
+      };
+      
+      window.addEventListener('error', function(event) {
+        if (event.message && isNoisy(event.message)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+      
+      window.addEventListener('unhandledrejection', function(event) {
+        const msg = event.reason?.message || String(event.reason);
+        if (msg && isNoisy(msg)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
